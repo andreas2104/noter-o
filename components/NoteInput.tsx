@@ -80,7 +80,10 @@ export default function NoteInput({ onAdd, onClearAll }: Props) {
   };
 
   return (
-    <div className="sticky top-0 z-20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-lg border-b border-zinc-200 dark:border-zinc-700 px-4 py-3">
+    <div
+      className="sticky top-0 z-20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-lg border-b border-zinc-200 dark:border-zinc-700 px-4 pt-3 pb-3"
+      style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top, 0px))" }}
+    >
       <textarea
         ref={inputRef}
         value={value}

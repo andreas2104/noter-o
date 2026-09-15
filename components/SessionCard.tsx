@@ -124,7 +124,7 @@ function Line({
       </span>
       <button
         onClick={() => setEditing(true)}
-        className="opacity-0 group-hover/line:opacity-100 focus:opacity-100 p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-300 hover:text-zinc-500 dark:hover:text-zinc-300 transition-all shrink-0"
+        className="opacity-0 group-hover/line:opacity-100 focus:opacity-100 touch-show p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-300 hover:text-zinc-500 dark:hover:text-zinc-300 transition-all shrink-0"
         aria-label="Modifier la ligne"
       >
         <Pencil className="w-3.5 h-3.5" />
@@ -177,9 +177,12 @@ export default function SessionCard({ lines, onDelete, onEdit }: Props) {
       onTouchEnd={handleTouchEnd}
     >
       <div
-        className="absolute inset-y-0 right-0 w-24 bg-red-600 flex items-center justify-center cursor-pointer"
+        className={`absolute inset-y-0 right-0 w-24 bg-red-600 flex items-center justify-center cursor-pointer ${
+          offset < 0 ? "pointer-events-auto" : "pointer-events-none"
+        }`}
         onClick={() => onDelete(lines)}
         role="button"
+        style={{ visibility: offset < 0 ? "visible" : "hidden" }}
         aria-label="Supprimer la session"
       >
         <Trash2 className="w-5 h-5 text-white" />
@@ -196,7 +199,7 @@ export default function SessionCard({ lines, onDelete, onEdit }: Props) {
           <div className="flex items-center gap-0.5">
             <button
               onClick={() => onDelete(lines)}
-              className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-zinc-300 hover:text-red-500 transition-all"
+              className="opacity-0 group-hover:opacity-100 focus:opacity-100 touch-show p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-zinc-300 hover:text-red-500 transition-all"
               aria-label="Supprimer la session"
             >
               <Trash2 className="w-4 h-4" />

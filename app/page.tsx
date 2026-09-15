@@ -12,7 +12,7 @@ import InstallPrompt from "@/components/InstallPrompt";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Toast from "@/components/Toast";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import { Calculator } from "lucide-react";
+import { Calculator, Search } from "lucide-react";
 
 export default function Home() {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -184,7 +184,10 @@ export default function Home() {
   return (
     <ErrorBoundary>
       <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950">
-        <header className="flex items-center justify-between px-4 pt-4 pb-2">
+        <header
+          className="flex items-center justify-between px-4 pt-4 pb-2"
+          style={{ paddingTop: "calc(1rem + env(safe-area-inset-top, 0px))" }}
+        >
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center">
               <Calculator className="w-4 h-4 text-white" />
@@ -194,6 +197,13 @@ export default function Home() {
             </h1>
           </div>
           <div className="flex items-center gap-1">
+            <button
+              onClick={() => document.getElementById("search-input")?.focus()}
+              className="sm:hidden p-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              aria-label="Rechercher"
+            >
+              <Search className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
+            </button>
             <InstallPrompt />
             <ExportButton notes={filteredNotes} onImport={handleImport} />
             <ThemeToggle />
@@ -209,7 +219,10 @@ export default function Home() {
           onDateRangeChange={setDateRange}
         />
 
-        <div className="flex-1 px-4 pb-24">
+        <div
+          className="flex-1 px-4 pb-24"
+          style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom, 0px))" }}
+        >
           <NoteList
             notes={filteredNotes}
             onDelete={handleDeleteRequest}

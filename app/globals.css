@@ -64,3 +64,9 @@ html {
 .animate-fade-in {
   animation: fade-in 0.2s ease-out;
 }
+
+@media (hover: none) {
+  .touch-show {
+    opacity: 1 !important;
+  }
+}
