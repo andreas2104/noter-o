@@ -126,4 +126,30 @@ test.describe("Note-O app", () => {
     await page.goto("/offline");
     await expect(page.getByText("Hors ligne")).toBeVisible();
   });
+
+  test("registers service worker", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.ready;
+    });
+    const swUrl = await page.evaluate(async () => {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      return regs[0]?.active?.scriptURL ?? null;
+    });
+    expect(swUrl).toContain("/serwist/sw.js");
+  });
+
+  test("works fully offline after first visit", async ({ page, context }) => {
+    await page.goto("/");
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.ready;
+    });
+    await page.waitForTimeout(1500);
+
+    await context.setOffline(true);
+    await page.reload({ waitUntil: "domcontentloaded" });
+
+    await expect(page.getByRole("heading", { name: "Note-O" })).toBeVisible();
+    await expect(page.getByText("Total général")).toBeVisible();
+  });
 });

@@ -3,7 +3,11 @@
 import { Serwist, CacheFirst, StaleWhileRevalidate } from "serwist";
 
 const serwist = new Serwist({
-  precacheEntries: self.__SW_MANIFEST,
+  precacheEntries: [
+    ...(self.__SW_MANIFEST ?? []),
+    { url: "/", revision: "app-shell" },
+    { url: "/offline.html", revision: "offline-page" },
+  ],
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
@@ -32,6 +36,16 @@ const serwist = new Serwist({
       }),
     },
   ],
+  fallbacks: {
+    entries: [
+      {
+        url: "/",
+        matcher({ request }) {
+          return request.destination === "document" || request.mode === "navigate";
+        },
+      },
+    ],
+  },
 });
 
 serwist.addEventListeners();
