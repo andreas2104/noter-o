@@ -1,69 +1,253 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { db, newSessionId, eventDateOf, type Note } from "@/lib/db";
+import NoteInput, { type SessionLine } from "@/components/NoteInput";
+import NoteList from "@/components/NoteList";
+import TotalBar from "@/components/TotalBar";
+import Filters, { type DateRange } from "@/components/Filters";
+import ExportButton from "@/components/ExportButton";
+import ThemeToggle from "@/components/ThemeToggle";
+import InstallPrompt from "@/components/InstallPrompt";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import Toast from "@/components/Toast";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import { Calculator } from "lucide-react";
 
 export default function Home() {
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange>({ from: "", to: "" });
+  const [loaded, setLoaded] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Note[] | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    undo?: () => void;
+  } | null>(null);
+  const [clearAllOpen, setClearAllOpen] = useState(false);
+
+  const loadNotes = useCallback(() => {
+    return db.notes
+      .orderBy("createdAt")
+      .reverse()
+      .toArray()
+      .then(setNotes);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    db.notes
+      .orderBy("createdAt")
+      .reverse()
+      .toArray()
+      .then((all) => {
+        if (!cancelled) {
+          setNotes(all);
+          setLoaded(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        document.getElementById("search-input")?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const handleAdd = useCallback(
+    (lines: SessionLine[], eventDate: Date) => {
+      const sessionId = newSessionId();
+      const now = new Date();
+      db.notes
+        .bulkAdd(
+          lines.map((l) => ({
+            rawInput: l.rawInput,
+            result: l.result,
+            category: l.category,
+            createdAt: now,
+            eventDate,
+            sessionId,
+          }))
+        )
+        .then(loadNotes);
+    },
+    [loadNotes]
+  );
+
+  const handleEdit = useCallback(
+    (id: number, rawInput: string, result: number) => {
+      db.notes.update(id, { rawInput, result }).then(loadNotes);
+      setToast({ message: "Ligne modifiée" });
+      setTimeout(() => setToast(null), 3000);
+    },
+    [loadNotes]
+  );
+
+  const handleDeleteRequest = useCallback((session: Note[]) => {
+    setPendingDelete(session);
+  }, []);
+
+  const confirmDelete = useCallback(() => {
+    if (!pendingDelete || pendingDelete.length === 0) return;
+    const deleted = pendingDelete;
+    const ids = deleted
+      .map((n) => n.id)
+      .filter((id): id is number => id != null);
+    db.notes.bulkDelete(ids).then(() => {
+      loadNotes();
+      setPendingDelete(null);
+      setToast({
+        message: "Session supprimée",
+        undo: () => {
+          const restored = deleted.map((line) => ({
+            rawInput: line.rawInput,
+            result: line.result,
+            category: line.category,
+            createdAt: line.createdAt,
+            eventDate: line.eventDate,
+            sessionId: line.sessionId,
+          }));
+          db.notes.bulkAdd(restored).then(() => {
+            loadNotes();
+            setToast(null);
+          });
+        },
+      });
+      setTimeout(() => setToast(null), 5000);
+    });
+  }, [pendingDelete, loadNotes]);
+
+  const handleClearAll = useCallback(() => {
+    db.notes.clear().then(() => {
+      loadNotes();
+      setClearAllOpen(false);
+      setToast({ message: "Toutes les notes ont été supprimées" });
+      setTimeout(() => setToast(null), 5000);
+    });
+  }, [loadNotes]);
+
+  const handleImport = useCallback(
+    (notesToImport: Omit<Note, "id">[]) => {
+      return db.notes.bulkAdd(notesToImport).then(() => {
+        loadNotes();
+        return notesToImport.length;
+      });
+    },
+    [loadNotes]
+  );
+
+  const filteredNotes = notes.filter((n) => {
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const dateStr = new Date(eventDateOf(n))
+        .toLocaleDateString("fr-FR")
+        .toLowerCase();
+      if (
+        !n.rawInput.toLowerCase().includes(q) &&
+        !dateStr.includes(q) &&
+        !n.category.toLowerCase().includes(q)
+      ) {
+        return false;
+      }
+    }
+
+    if (dateRange.from || dateRange.to) {
+      const d = new Date(eventDateOf(n));
+      const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+        2,
+        "0"
+      )}-${String(d.getDate()).padStart(2, "0")}`;
+      if (dateRange.from && day < dateRange.from) return false;
+      if (dateRange.to && day > dateRange.to) return false;
+    }
+
+    return true;
+  });
+
+  const total = filteredNotes.reduce((sum, n) => sum + n.result, 0);
+
+  const sessionKeys = new Set(
+    filteredNotes.map((n) =>
+      n.sessionId ? `s:${n.sessionId}` : `n:${n.id}`
+    )
+  );
+  const sessionCount = sessionKeys.size;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <ErrorBoundary>
+      <div className="flex flex-col min-h-screen bg-zinc-50 dark:bg-zinc-950">
+        <header className="flex items-center justify-between px-4 pt-4 pb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center">
+              <Calculator className="w-4 h-4 text-white" />
+            </div>
+            <h1 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+              Note-O
+            </h1>
+          </div>
+          <div className="flex items-center gap-1">
+            <InstallPrompt />
+            <ExportButton notes={filteredNotes} onImport={handleImport} />
+            <ThemeToggle />
+          </div>
+        </header>
+
+        <NoteInput onAdd={handleAdd} onClearAll={() => setClearAllOpen(true)} />
+
+        <Filters
+          searchQuery={searchQuery}
+          onSearch={setSearchQuery}
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+
+        <div className="flex-1 px-4 pb-24">
+          <NoteList
+            notes={filteredNotes}
+            onDelete={handleDeleteRequest}
+            onEdit={handleEdit}
+            loaded={loaded}
+          />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+        <TotalBar total={total} count={sessionCount} />
+
+        {toast && (
+          <Toast
+            message={toast.message}
+            onUndo={toast.undo}
+            onDismiss={() => setToast(null)}
+          />
+        )}
+
+        <ConfirmDialog
+          open={pendingDelete !== null}
+          title="Supprimer la session ?"
+          message={`Supprimer ${pendingDelete?.length ?? 0} ligne${
+            (pendingDelete?.length ?? 0) > 1 ? "s" : ""
+          } ? Annulation possible 5 secondes.`}
+          onConfirm={confirmDelete}
+          onCancel={() => setPendingDelete(null)}
+        />
+
+        <ConfirmDialog
+          open={clearAllOpen}
+          title="Tout supprimer ?"
+          message={`Supprimer définitivement ${notes.length} note${
+            notes.length > 1 ? "s" : ""
+          } ?`}
+          onConfirm={handleClearAll}
+          onCancel={() => setClearAllOpen(false)}
+        />
+      </div>
+    </ErrorBoundary>
   );
 }
