@@ -7,8 +7,10 @@ import {
   FileJson,
   FileText,
   UploadCloud,
+  Printer,
 } from "lucide-react";
 import { eventDateOf, type Note } from "@/lib/db";
+import { printAll } from "@/lib/print";
 
 interface Props {
   notes: Note[];
@@ -48,6 +50,11 @@ export default function ExportButton({ notes, onImport }: Props) {
       .join("\n");
     download(header + rows, "note-o-export.csv", "text/csv");
     setOpen(false);
+  };
+
+  const printPDF = () => {
+    setOpen(false);
+    window.setTimeout(printAll, 0);
   };
 
   const exportJSONTemplate = () => {
@@ -176,6 +183,16 @@ export default function ExportButton({ notes, onImport }: Props) {
     <>
       <div className="relative">
         <button
+          onClick={printPDF}
+          disabled={notes.length === 0}
+          className="print:hidden flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          aria-label="Imprimer ou enregistrer en PDF"
+          title="Imprimer ou enregistrer en PDF"
+        >
+          <Printer className="w-4 h-4" />
+          <span className="hidden sm:inline">PDF</span>
+        </button>
+        <button
           onClick={() => setOpen(!open)}
           className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
         >
@@ -201,6 +218,14 @@ export default function ExportButton({ notes, onImport }: Props) {
               >
                 <FileText className="w-4 h-4" />
                 Exporter CSV
+              </button>
+              <button
+                onClick={printPDF}
+                disabled={notes.length === 0}
+                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Printer className="w-4 h-4" />
+                Imprimer / PDF
               </button>
               <button
                 onClick={() => fileRef.current?.click()}

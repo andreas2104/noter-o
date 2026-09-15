@@ -70,3 +70,23 @@ html {
     opacity: 1 !important;
   }
 }
+
+@media print {
+  @page { margin: 1.2cm; }
+  body { background: white !important; color: black !important; }
+  header, [class*="sticky"], .print\:hidden, button, input, select, textarea {
+    display: none !important;
+  }
+  .min-h-screen { min-height: 0 !important; }
+  .bg-white, .dark\:bg-zinc-800\/60 { background: white !important; }
+  [class*="border-"] { border-color: #d4d4d8 !important; }
+  .rounded-2xl { border-radius: 0.35rem !important; }
+  .date-heading > button:first-child { display: flex !important; }
+  .date-sessions { display: flex !important; }
+  body.print-date-only .date-group:not(.print-selected) { display: none !important; }
+  body.print-session-only .date-group:not(:has(.session-card.print-selected)) {
+    display: none !important;
+  }
+  body.print-session-only .date-heading { display: none !important; }
+  body.print-session-only .session-card:not(.print-selected) { display: none !important; }
+}

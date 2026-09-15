@@ -1,14 +1,43 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Trash2, Pencil, Check, X, AlertCircle } from "lucide-react";
+import {
+  Trash2,
+  Pencil,
+  Check,
+  X,
+  AlertCircle,
+  Plus,
+  CalendarDays,
+  Printer,
+} from "lucide-react";
 import { formatResult, parseExpression } from "@/lib/parser";
-import { eventDateOf, type Note } from "@/lib/db";
+import { CATEGORIES, eventDateOf, type Note } from "@/lib/db";
+import { printPartial } from "@/lib/print";
 
 interface Props {
   lines: Note[];
   onDelete: (lines: Note[]) => void;
   onEdit: (id: number, rawInput: string, result: number) => void;
+  onAddToSession?: (
+    sessionId: string,
+    rawInput: string,
+    result: number,
+    category: string,
+    eventDate: Date
+  ) => void;
+}
+
+function dateToLocalISO(date: Date): string {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
+}
+
+function isoToLocalDate(iso: string): Date {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(year, month - 1, day);
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -133,17 +162,43 @@ function Line({
   );
 }
 
-export default function SessionCard({ lines, onDelete, onEdit }: Props) {
+export default function SessionCard({ lines, onDelete, onEdit, onAddToSession }: Props) {
   const [swiping, setSwiping] = useState(false);
   const [offset, setOffset] = useState(0);
+  const [adding, setAdding] = useState(false);
+  const [addValue, setAddValue] = useState("");
+  const [addDate, setAddDate] = useState(() => dateToLocalISO(eventDateOf(lines[0])));
+  const [addCategory, setAddCategory] = useState(CATEGORIES[0]);
+  const [addError, setAddError] = useState(false);
   const startX = useRef<number | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
-  const dateStr = new Date(eventDateOf(lines[0])).toLocaleDateString("fr-FR", {
+  const dateFormatter: Intl.DateTimeFormatOptions = {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  });
+  };
+  const eventTimes = lines.map((line) => new Date(eventDateOf(line)).getTime());
+  const firstDate = new Date(Math.min(...eventTimes));
+  const lastDate = new Date(Math.max(...eventTimes));
+  const firstDateStr = firstDate.toLocaleDateString("fr-FR", dateFormatter);
+  const lastDateStr = lastDate.toLocaleDateString("fr-FR", dateFormatter);
+  const dateStr = firstDateStr === lastDateStr ? firstDateStr : `${firstDateStr} – ${lastDateStr}`;
   const total = lines.reduce((sum, l) => sum + l.result, 0);
+  const sessionId = lines[0].sessionId;
+
+  const confirmAdd = useCallback(() => {
+    const rawInput = addValue.trim();
+    const result = parseExpression(rawInput);
+    if (!sessionId || !rawInput || result === null || !onAddToSession) {
+      setAddError(true);
+      return;
+    }
+    onAddToSession(sessionId, rawInput, result, addCategory, isoToLocalDate(addDate));
+    setAddValue("");
+    setAddError(false);
+    setAdding(false);
+  }, [addCategory, addDate, addValue, onAddToSession, sessionId]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     startX.current = e.touches[0].clientX;
@@ -168,7 +223,8 @@ export default function SessionCard({ lines, onDelete, onEdit }: Props) {
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl transition-transform ${
+      ref={cardRef}
+      className={`session-card relative overflow-hidden rounded-2xl transition-transform ${
         swiping ? "" : "duration-200 ease-out"
       }`}
       style={{ transform: `translateX(${offset}px)` }}
@@ -198,6 +254,14 @@ export default function SessionCard({ lines, onDelete, onEdit }: Props) {
           </p>
           <div className="flex items-center gap-0.5">
             <button
+              onClick={() => printPartial("session", cardRef.current)}
+              className="print:hidden opacity-0 group-hover:opacity-100 focus:opacity-100 touch-show p-1.5 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-zinc-300 hover:text-emerald-600 transition-all"
+              aria-label="Imprimer cette session"
+              title="Imprimer cette session"
+            >
+              <Printer className="w-4 h-4" />
+            </button>
+            <button
               onClick={() => onDelete(lines)}
               className="opacity-0 group-hover:opacity-100 focus:opacity-100 touch-show p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-zinc-300 hover:text-red-500 transition-all"
               aria-label="Supprimer la session"
@@ -214,6 +278,68 @@ export default function SessionCard({ lines, onDelete, onEdit }: Props) {
             ) : null
           )}
         </div>
+
+        {sessionId && (
+          <div className="px-4 pb-2 print:hidden">
+            {!adding ? (
+              <button
+                onClick={() => setAdding(true)}
+                className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700"
+              >
+                <Plus className="w-3.5 h-3.5" /> Ajouter une note à cette session
+              </button>
+            ) : (
+              <div className="flex flex-col gap-2 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 p-2">
+                <input
+                  autoFocus
+                  value={addValue}
+                  onChange={(e) => {
+                    setAddValue(e.target.value);
+                    setAddError(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") confirmAdd();
+                    if (e.key === "Escape") setAdding(false);
+                  }}
+                  placeholder="Nouvelle opération, ex. 2.000 + 500"
+                  aria-label="Nouvelle note"
+                  className={`w-full px-3 py-2 rounded-lg text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 outline-none ${
+                    addError ? "ring-2 ring-red-500" : "focus:ring-2 focus:ring-emerald-500"
+                  }`}
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="relative">
+                    <CalendarDays className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-emerald-600 pointer-events-none" />
+                    <input
+                      type="date"
+                      value={addDate}
+                      onChange={(e) => setAddDate(e.target.value)}
+                      aria-label="Date de la nouvelle note"
+                      className="pl-7 pr-1.5 py-1.5 rounded-lg text-xs bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </label>
+                  <select
+                    value={addCategory}
+                    onChange={(e) => setAddCategory(e.target.value)}
+                    aria-label="Catégorie de la nouvelle note"
+                    className="max-w-[8rem] px-2 py-1.5 rounded-lg text-xs bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    {CATEGORIES.map((category) => <option key={category}>{category}</option>)}
+                  </select>
+                  <div className="ml-auto flex gap-1">
+                    <button onClick={confirmAdd} className="p-1.5 rounded-lg bg-emerald-600 text-white" aria-label="Enregistrer la nouvelle note">
+                      <Check className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setAdding(false)} className="p-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300" aria-label="Annuler l'ajout">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                {addError && <span className="text-xs text-red-500">Saisissez une opération valide.</span>}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center justify-between px-4 py-2.5 border-t border-zinc-100 dark:border-zinc-700/50">
           <span className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">

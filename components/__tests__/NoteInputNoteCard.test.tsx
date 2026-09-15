@@ -159,4 +159,31 @@ describe("SessionCard", () => {
     fireEvent.click(deleteButtons[deleteButtons.length - 1]);
     expect(onDelete).toHaveBeenCalledWith(lines);
   });
+
+  it("adds a note to an existing session with its chosen date", async () => {
+    const user = userEvent.setup();
+    const onAddToSession = vi.fn();
+    render(
+      <SessionCard
+        lines={lines}
+        onDelete={vi.fn()}
+        onEdit={vi.fn()}
+        onAddToSession={onAddToSession}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /Ajouter une note à cette session/ }));
+    await user.type(screen.getByLabelText("Nouvelle note"), "750 + 250");
+    await user.clear(screen.getByLabelText("Date de la nouvelle note"));
+    await user.type(screen.getByLabelText("Date de la nouvelle note"), "2026-09-20");
+    await user.click(screen.getByLabelText("Enregistrer la nouvelle note"));
+
+    expect(onAddToSession).toHaveBeenCalledWith(
+      "sess-1",
+      "750 + 250",
+      1000,
+      "Général",
+      new Date(2026, 8, 20)
+    );
+  });
 });

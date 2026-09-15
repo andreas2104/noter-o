@@ -1,13 +1,23 @@
 "use client";
 
+import { useRef, useState } from "react";
 import SessionCard from "./SessionCard";
-import { Inbox } from "lucide-react";
+import { ChevronDown, Inbox, Printer } from "lucide-react";
 import { eventDateOf, type Note } from "@/lib/db";
+import { formatResult } from "@/lib/parser";
+import { printPartial } from "@/lib/print";
 
 interface Props {
   notes: Note[];
   onDelete: (lines: Note[]) => void;
   onEdit: (id: number, rawInput: string, result: number) => void;
+  onAddToSession: (
+    sessionId: string,
+    rawInput: string,
+    result: number,
+    category: string,
+    eventDate: Date
+  ) => void;
   loaded: boolean;
 }
 
@@ -28,7 +38,98 @@ function groupBySession(notes: Note[]): Note[][] {
   return result;
 }
 
-export default function NoteList({ notes, onDelete, onEdit, loaded }: Props) {
+function dateKeyOf(session: Note[]): string {
+  const times = session.map((note) => new Date(eventDateOf(note)).getTime());
+  const date = new Date(Math.min(...times));
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate()
+  ).padStart(2, "0")}`;
+}
+
+function groupSessionsByDate(notes: Note[]): Array<[string, Note[][]]> {
+  const dates = new Map<string, Note[][]>();
+  for (const session of groupBySession(notes)) {
+    const key = dateKeyOf(session);
+    const group = dates.get(key);
+    if (group) group.push(session);
+    else dates.set(key, [session]);
+  }
+  return [...dates.entries()].sort(([a], [b]) => b.localeCompare(a));
+}
+
+function DateSection({
+  dateKey,
+  sessions,
+  defaultOpen,
+  onDelete,
+  onEdit,
+  onAddToSession,
+}: {
+  dateKey: string;
+  sessions: Note[][];
+  defaultOpen: boolean;
+  onDelete: Props["onDelete"];
+  onEdit: Props["onEdit"];
+  onAddToSession: Props["onAddToSession"];
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const sectionRef = useRef<HTMLElement>(null);
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const label = new Date(year, month - 1, day).toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+  const total = sessions.flat().reduce((sum, note) => sum + note.result, 0);
+
+  return (
+    <section ref={sectionRef} className="date-group flex flex-col gap-2">
+      <div className="date-heading flex items-center gap-2 rounded-xl bg-zinc-100 dark:bg-zinc-900 px-3 py-2">
+        <button
+          onClick={() => setOpen((value) => !value)}
+          className="flex flex-1 items-center gap-2 text-left"
+          aria-expanded={open}
+        >
+          <ChevronDown
+            className={`print:hidden h-4 w-4 text-zinc-500 transition-transform ${open ? "" : "-rotate-90"}`}
+          />
+          <span className="text-sm font-semibold capitalize text-zinc-700 dark:text-zinc-200">
+            {label}
+          </span>
+          <span className="ml-auto text-xs text-zinc-500 dark:text-zinc-400">
+            {sessions.length} session{sessions.length > 1 ? "s" : ""} · {formatResult(total)} Ar
+          </span>
+        </button>
+        <button
+          onClick={() => printPartial("date", sectionRef.current)}
+          className="print:hidden rounded-lg p-1.5 text-zinc-400 hover:bg-white hover:text-emerald-600 dark:hover:bg-zinc-800"
+          aria-label={`Imprimer les notes du ${label}`}
+          title="Imprimer cette date"
+        >
+          <Printer className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className={`date-sessions flex flex-col gap-2 ${open ? "" : "hidden"}`}>
+        {sessions.map((session) => {
+          const key = session[0].sessionId ?? `note-${session[0].id}`;
+          return (
+            <SessionCard
+              key={key}
+              lines={session}
+              onDelete={onDelete}
+              onEdit={onEdit}
+              onAddToSession={onAddToSession}
+            />
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+export default function NoteList({ notes, onDelete, onEdit, onAddToSession, loaded }: Props) {
   if (!loaded) {
     return (
       <div className="flex flex-col gap-2">
@@ -64,14 +165,19 @@ export default function NoteList({ notes, onDelete, onEdit, loaded }: Props) {
     );
   }
 
+  const dateGroups = groupSessionsByDate(notes);
+
   return (
-    <div className="flex flex-col gap-2">
-      {groupBySession(notes).map((session, i) => (
-        <SessionCard
-          key={i}
-          lines={session}
+    <div className="flex flex-col gap-3">
+      {dateGroups.map(([dateKey, sessions], index) => (
+        <DateSection
+          key={dateKey}
+          dateKey={dateKey}
+          sessions={sessions}
+          defaultOpen={index === 0}
           onDelete={onDelete}
           onEdit={onEdit}
+          onAddToSession={onAddToSession}
         />
       ))}
     </div>

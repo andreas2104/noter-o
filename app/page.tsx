@@ -82,6 +82,21 @@ export default function Home() {
     [loadNotes]
   );
 
+  const handleAddToSession = useCallback(
+    (
+      sessionId: string,
+      rawInput: string,
+      result: number,
+      category: string,
+      eventDate: Date
+    ) => {
+      db.notes
+        .add({ rawInput, result, category, createdAt: new Date(), eventDate, sessionId })
+        .then(loadNotes);
+    },
+    [loadNotes]
+  );
+
   const handleEdit = useCallback(
     (id: number, rawInput: string, result: number) => {
       db.notes.update(id, { rawInput, result }).then(loadNotes);
@@ -227,6 +242,7 @@ export default function Home() {
             notes={filteredNotes}
             onDelete={handleDeleteRequest}
             onEdit={handleEdit}
+            onAddToSession={handleAddToSession}
             loaded={loaded}
           />
         </div>
