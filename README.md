@@ -64,30 +64,18 @@ TAURI_ANDROID_TARGET=aarch64 docker compose --profile android run --rm tauri-and
 Pour produire une autre architecture, remplacer `aarch64` par `armv7`, `i686`
 ou `x86_64`.
 
-## Déploiement Cloudflare avec OpenNext
+## APK Android via GitHub Actions
 
-Le déploiement Cloudflare utilise maintenant `@opennextjs/cloudflare` et
-Workers, avec la configuration [wrangler.jsonc](./wrangler.jsonc). Le build
-OpenNext ne produit pas le dossier `out` : ce dossier reste réservé au build
-statique Tauri (`npm run build:tauri`).
+Le workflow [android-apk.yml](.github/workflows/android-apk.yml) compile
+l’application Tauri Android et publie l’APK comme artefact GitHub. Il peut être
+lancé manuellement depuis l’onglet **Actions** ou automatiquement sur `main`.
 
-```bash
-pnpm install
-pnpm cf:build
-pnpm cf:preview
-```
-
-Pour déployer en production :
+Pour publier un APK dans une GitHub Release de test, créer un tag de version :
 
 ```bash
-pnpm deploy:cf
+git tag v0.1.0
+git push origin v0.1.0
 ```
 
-`pnpm deploy:cf` construit toujours l'artefact OpenNext avant de lancer
-Wrangler. Dans Cloudflare Workers Builds, utilisez donc `pnpm deploy:cf` comme
-commande de déploiement ; elle ne dépend pas d'un artefact `.open-next` produit
-par une étape précédente.
-
-Les commandes `cf:preview` et `deploy:cf` nécessitent une authentification
-Cloudflare Wrangler (`pnpm wrangler login`) ou les variables d’accès Cloudflare
-configurées dans l’environnement CI.
+La signature Android n’est pas activée pour l’instant ; l’APK est destiné aux
+tests et peut être installé manuellement sur un appareil Android.

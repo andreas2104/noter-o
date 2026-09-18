@@ -8,9 +8,6 @@
     "build": "next build --webpack",
     "build:tauri": "TAURI_BUILD=1 next build --webpack",
     "preview": "npm run build:tauri && node scripts/serve.mjs out 3000",
-    "cf:build": "opennextjs-cloudflare build",
-    "cf:preview": "opennextjs-cloudflare preview",
-    "deploy:cf": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "tauri": "tauri",
     "tauri:build": "tauri build --ci",
     "tauri:android": "tauri android",
@@ -28,7 +25,6 @@
     "serwist": "^9.5.12"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "^1.20.6",
     "@playwright/test": "^1.63.0",
     "@serwist/turbopack": "^9.5.12",
     "@tailwindcss/postcss": "^4",
@@ -50,7 +46,6 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vite": "^8.3.0",
-    "vitest": "^5.0.0",
-    "wrangler": "^4.131.2"
+    "vitest": "^5.0.0"
   }
 }
