@@ -27,6 +27,7 @@ export default function ExportButton({ notes, onImport }: Props) {
       rawInput: n.rawInput,
       result: n.result,
       category: n.category,
+      sessionTitle: n.sessionTitle ?? undefined,
       eventDate: new Date(eventDateOf(n)).toISOString(),
       sessionId: n.sessionId ?? undefined,
     }));
@@ -39,13 +40,13 @@ export default function ExportButton({ notes, onImport }: Props) {
   };
 
   const exportCSV = () => {
-    const header = "Entrée,Résultat,Date,Catégorie,Session\n";
+    const header = "Entrée,Résultat,Date,Catégorie,Session,Titre\n";
     const rows = notes
       .map(
         (n) =>
           `"${n.rawInput.replace(/"/g, '""')}",${n.result},${new Date(
             eventDateOf(n)
-          ).toISOString()},"${n.category.replace(/"/g, '""')}","${(n.sessionId ?? "").replace(/"/g, '""')}"`
+          ).toISOString()},"${n.category.replace(/"/g, '""')}","${(n.sessionId ?? "").replace(/"/g, '""')}","${(n.sessionTitle ?? "").replace(/"/g, '""')}"`
       )
       .join("\n");
     download(header + rows, "note-o-export.csv", "text/csv");
@@ -64,6 +65,7 @@ export default function ExportButton({ notes, onImport }: Props) {
           rawInput: "100.000 (loyer) + 400.000 (provision)",
           result: 500000,
           category: "Loyer",
+          sessionTitle: "Dépenses de septembre",
           eventDate: "2026-09-15T00:00:00.000Z",
         },
       ],
@@ -93,6 +95,7 @@ export default function ExportButton({ notes, onImport }: Props) {
         category?: string;
         eventDate?: string;
         sessionId?: string;
+        sessionTitle?: string;
       }>;
 
       if (file.name.endsWith(".json")) {
@@ -136,6 +139,7 @@ export default function ExportButton({ notes, onImport }: Props) {
             category: row[3],
             eventDate: row[2],
             sessionId: row[4],
+            sessionTitle: row[5],
           }));
       } else {
         throw new Error("Format non supporté");
@@ -157,6 +161,7 @@ export default function ExportButton({ notes, onImport }: Props) {
           createdAt: now,
           eventDate: n.eventDate ? new Date(n.eventDate) : now,
           sessionId: n.sessionId || undefined,
+          sessionTitle: n.sessionTitle?.trim() || undefined,
         }));
 
       if (valid.length === 0) {

@@ -11,6 +11,7 @@ interface Props {
   notes: Note[];
   onDelete: (lines: Note[]) => void;
   onEdit: (id: number, rawInput: string, result: number) => void;
+  onUpdateSessionTitle: (lines: Note[], sessionTitle: string) => void;
   onAddToSession: (
     sessionId: string,
     rawInput: string,
@@ -63,6 +64,7 @@ function DateSection({
   defaultOpen,
   onDelete,
   onEdit,
+  onUpdateSessionTitle,
   onAddToSession,
 }: {
   dateKey: string;
@@ -70,6 +72,7 @@ function DateSection({
   defaultOpen: boolean;
   onDelete: Props["onDelete"];
   onEdit: Props["onEdit"];
+  onUpdateSessionTitle: Props["onUpdateSessionTitle"];
   onAddToSession: Props["onAddToSession"];
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -120,6 +123,7 @@ function DateSection({
               lines={session}
               onDelete={onDelete}
               onEdit={onEdit}
+              onUpdateSessionTitle={onUpdateSessionTitle}
               onAddToSession={onAddToSession}
             />
           );
@@ -129,7 +133,14 @@ function DateSection({
   );
 }
 
-export default function NoteList({ notes, onDelete, onEdit, onAddToSession, loaded }: Props) {
+export default function NoteList({
+  notes,
+  onDelete,
+  onEdit,
+  onUpdateSessionTitle,
+  onAddToSession,
+  loaded,
+}: Props) {
   if (!loaded) {
     return (
       <div className="flex flex-col gap-2">
@@ -177,6 +188,7 @@ export default function NoteList({ notes, onDelete, onEdit, onAddToSession, load
           defaultOpen={index === 0}
           onDelete={onDelete}
           onEdit={onEdit}
+          onUpdateSessionTitle={onUpdateSessionTitle}
           onAddToSession={onAddToSession}
         />
       ))}

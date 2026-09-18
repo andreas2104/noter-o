@@ -19,6 +19,7 @@ interface Props {
   lines: Note[];
   onDelete: (lines: Note[]) => void;
   onEdit: (id: number, rawInput: string, result: number) => void;
+  onUpdateSessionTitle?: (lines: Note[], sessionTitle: string) => void;
   onAddToSession?: (
     sessionId: string,
     rawInput: string,
@@ -162,7 +163,13 @@ function Line({
   );
 }
 
-export default function SessionCard({ lines, onDelete, onEdit, onAddToSession }: Props) {
+export default function SessionCard({
+  lines,
+  onDelete,
+  onEdit,
+  onUpdateSessionTitle,
+  onAddToSession,
+}: Props) {
   const [swiping, setSwiping] = useState(false);
   const [offset, setOffset] = useState(0);
   const [adding, setAdding] = useState(false);
@@ -170,6 +177,10 @@ export default function SessionCard({ lines, onDelete, onEdit, onAddToSession }:
   const [addDate, setAddDate] = useState(() => dateToLocalISO(eventDateOf(lines[0])));
   const [addCategory, setAddCategory] = useState(CATEGORIES[0]);
   const [addError, setAddError] = useState(false);
+  const currentTitle =
+    lines.find((line) => line.sessionTitle?.trim())?.sessionTitle?.trim() ?? "";
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleValue, setTitleValue] = useState(currentTitle);
   const startX = useRef<number | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -186,6 +197,11 @@ export default function SessionCard({ lines, onDelete, onEdit, onAddToSession }:
   const dateStr = firstDateStr === lastDateStr ? firstDateStr : `${firstDateStr} – ${lastDateStr}`;
   const total = lines.reduce((sum, l) => sum + l.result, 0);
   const sessionId = lines[0].sessionId;
+
+  const confirmTitle = useCallback(() => {
+    onUpdateSessionTitle?.(lines, titleValue.trim());
+    setEditingTitle(false);
+  }, [lines, onUpdateSessionTitle, titleValue]);
 
   const confirmAdd = useCallback(() => {
     const rawInput = addValue.trim();
@@ -269,6 +285,69 @@ export default function SessionCard({ lines, onDelete, onEdit, onAddToSession }:
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
+        </div>
+
+        <div className="px-4 pb-1">
+          {editingTitle ? (
+            <div className="print:hidden flex items-center gap-1.5">
+              <input
+                autoFocus
+                type="text"
+                value={titleValue}
+                onChange={(e) => setTitleValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") confirmTitle();
+                  if (e.key === "Escape") setEditingTitle(false);
+                }}
+                placeholder="Titre ou note de la session"
+                aria-label="Modifier le titre de la session"
+                maxLength={120}
+                className="min-w-0 flex-1 rounded-lg bg-zinc-100 px-3 py-1.5 text-sm font-semibold text-zinc-900 outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-zinc-900 dark:text-zinc-100"
+              />
+              <button
+                onClick={confirmTitle}
+                className="rounded-lg p-1.5 text-emerald-600 hover:bg-emerald-100 dark:text-emerald-400 dark:hover:bg-emerald-900/30"
+                aria-label="Enregistrer le titre de la session"
+              >
+                <Check className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setEditingTitle(false)}
+                className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-red-500 dark:hover:bg-zinc-700"
+                aria-label="Annuler la modification du titre"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : currentTitle ? (
+            <div className="group/title flex items-center gap-2">
+              <h2 className="min-w-0 flex-1 truncate text-base font-semibold text-zinc-800 dark:text-zinc-100">
+                {currentTitle}
+              </h2>
+              {onUpdateSessionTitle && (
+                <button
+                  onClick={() => {
+                    setTitleValue(currentTitle);
+                    setEditingTitle(true);
+                  }}
+                  className="print:hidden touch-show rounded-lg p-1 text-zinc-300 opacity-0 transition-all hover:bg-zinc-100 hover:text-zinc-500 focus:opacity-100 group-hover/title:opacity-100 dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
+                  aria-label="Modifier le titre de la session"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          ) : onUpdateSessionTitle ? (
+            <button
+              onClick={() => {
+                setTitleValue(currentTitle);
+                setEditingTitle(true);
+              }}
+              className="print:hidden flex items-center gap-1 text-xs text-zinc-400 transition-colors hover:text-emerald-600 dark:text-zinc-500 dark:hover:text-emerald-400"
+            >
+              <Plus className="h-3.5 w-3.5" /> Ajouter un titre ou une note
+            </button>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-1 px-4 py-2">

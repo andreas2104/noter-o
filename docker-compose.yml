@@ -1,0 +1,20 @@
+services:
+  tauri-desktop:
+    build:
+      context: .
+      dockerfile: Dockerfile.tauri
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./artifacts/desktop:/artifacts
+
+  tauri-android:
+    profiles: ["android"]
+    build:
+      context: .
+      dockerfile: Dockerfile.android
+    environment:
+      TAURI_ANDROID_TARGET: ${TAURI_ANDROID_TARGET:-aarch64}
+    volumes:
+      - .:/workspace
+      - ./artifacts/android:/artifacts

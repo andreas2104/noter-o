@@ -12,7 +12,7 @@ export interface SessionLine {
 }
 
 interface Props {
-  onAdd: (lines: SessionLine[], eventDate: Date) => void;
+  onAdd: (lines: SessionLine[], eventDate: Date, sessionTitle?: string) => void;
   onClearAll: () => void;
 }
 
@@ -37,6 +37,7 @@ interface PreviewLine {
 
 export default function NoteInput({ onAdd, onClearAll }: Props) {
   const [value, setValue] = useState("");
+  const [sessionTitle, setSessionTitle] = useState("");
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [eventDate, setEventDate] = useState(todayLocalISO);
   const [showClear, setShowClear] = useState(false);
@@ -66,11 +67,12 @@ export default function NoteInput({ onAdd, onClearAll }: Props) {
       result: l.result as number,
       category,
     }));
-    onAdd(lines, isoToDate(eventDate));
+    onAdd(lines, isoToDate(eventDate), sessionTitle.trim() || undefined);
     setValue("");
+    setSessionTitle("");
     setCategory(CATEGORIES[0]);
     inputRef.current?.focus();
-  }, [canSubmit, preview, onAdd, category, eventDate]);
+  }, [canSubmit, preview, onAdd, category, eventDate, sessionTitle]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
@@ -84,6 +86,15 @@ export default function NoteInput({ onAdd, onClearAll }: Props) {
       className="sticky top-0 z-20 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-lg border-b border-zinc-200 dark:border-zinc-700 px-4 pt-3 pb-3"
       style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top, 0px))" }}
     >
+      <input
+        type="text"
+        value={sessionTitle}
+        onChange={(e) => setSessionTitle(e.target.value)}
+        placeholder="Titre ou note de la session (facultatif)"
+        aria-label="Titre de la session"
+        maxLength={120}
+        className="mb-2 w-full rounded-xl bg-zinc-100 px-4 py-2.5 text-sm font-medium text-zinc-900 outline-none transition-all placeholder:font-normal placeholder:text-zinc-400 focus:ring-2 focus:ring-emerald-500 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+      />
       <textarea
         ref={inputRef}
         value={value}

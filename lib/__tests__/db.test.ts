@@ -10,12 +10,13 @@ describe("database", () => {
     await db.notes.clear();
   });
 
-  it("adds a note with category, eventDate and sessionId", async () => {
+  it("adds a note with category, eventDate, sessionId and sessionTitle", async () => {
     const eventDate = new Date(2026, 8, 15);
     const id = await db.notes.add({
       rawInput: "20000ar (carburant) + 3000",
       result: 23000,
       category: "Carburant",
+      sessionTitle: "Entretien voiture",
       createdAt: new Date(),
       eventDate,
       sessionId: "sess-1",
@@ -26,6 +27,7 @@ describe("database", () => {
     expect(note?.rawInput).toBe("20000ar (carburant) + 3000");
     expect(note?.result).toBe(23000);
     expect(note?.category).toBe("Carburant");
+    expect(note?.sessionTitle).toBe("Entretien voiture");
     expect(note?.sessionId).toBe("sess-1");
     expect(note?.eventDate?.getTime()).toBe(eventDate.getTime());
   });

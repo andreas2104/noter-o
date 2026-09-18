@@ -5,6 +5,7 @@ export interface Note {
   rawInput: string;
   result: number;
   category: string;
+  sessionTitle?: string;
   createdAt: Date;
   eventDate: Date;
   sessionId?: string;

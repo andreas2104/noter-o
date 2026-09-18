@@ -44,6 +44,23 @@ describe("NoteInput", () => {
     expect(lines[1].result).toBe(500000);
   });
 
+  it("adds an optional title to the session and clears it", async () => {
+    const user = userEvent.setup();
+    const onAdd = vi.fn();
+    render(<NoteInput onAdd={onAdd} onClearAll={vi.fn()} />);
+
+    const title = screen.getByLabelText("Titre de la session");
+    await user.type(title, "Courses du week-end");
+    await user.type(
+      screen.getByPlaceholderText(/20000ar \(carburant\)/),
+      "2500 + 500"
+    );
+    await user.click(screen.getByRole("button", { name: "Ajouter" }));
+
+    expect(onAdd.mock.calls[0][2]).toBe("Courses du week-end");
+    expect(title).toHaveValue("");
+  });
+
   it("clears the input after successful add", async () => {
     const user = userEvent.setup();
     render(<NoteInput onAdd={vi.fn()} onClearAll={vi.fn()} />);
@@ -184,6 +201,35 @@ describe("SessionCard", () => {
       1000,
       "Général",
       new Date(2026, 8, 20)
+    );
+  });
+
+  it("edits the session title", async () => {
+    const user = userEvent.setup();
+    const onUpdateSessionTitle = vi.fn();
+    const titledLines = lines.map((line) => ({
+      ...line,
+      sessionTitle: "Ancien titre",
+    }));
+    render(
+      <SessionCard
+        lines={titledLines}
+        onDelete={vi.fn()}
+        onEdit={vi.fn()}
+        onUpdateSessionTitle={onUpdateSessionTitle}
+      />
+    );
+
+    expect(screen.getByText("Ancien titre")).toBeInTheDocument();
+    await user.click(screen.getByLabelText("Modifier le titre de la session"));
+    const input = screen.getByLabelText("Modifier le titre de la session");
+    await user.clear(input);
+    await user.type(input, "Nouveau titre");
+    await user.click(screen.getByLabelText("Enregistrer le titre de la session"));
+
+    expect(onUpdateSessionTitle).toHaveBeenCalledWith(
+      titledLines,
+      "Nouveau titre"
     );
   });
 });

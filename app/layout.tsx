@@ -8,6 +8,12 @@ export const metadata: Metadata = {
   description:
     "Bloc-notes calculatrice intelligent — Calculez vos opérations en un clin d'œil.",
   applicationName: "Note-O",
+  authors: [{ name: "Andreas CircutLab" }],
+  creator: "Andreas CircutLab",
+  publisher: "Andreas CircutLab",
+  other: {
+    copyright: "Copyright © 2026 Andreas CircutLab. Tous droits réservés.",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

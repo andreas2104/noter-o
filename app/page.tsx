@@ -63,7 +63,7 @@ export default function Home() {
   }, []);
 
   const handleAdd = useCallback(
-    (lines: SessionLine[], eventDate: Date) => {
+    (lines: SessionLine[], eventDate: Date, sessionTitle?: string) => {
       const sessionId = newSessionId();
       const now = new Date();
       db.notes
@@ -72,6 +72,7 @@ export default function Home() {
             rawInput: l.rawInput,
             result: l.result,
             category: l.category,
+            sessionTitle,
             createdAt: now,
             eventDate,
             sessionId,
@@ -83,16 +84,54 @@ export default function Home() {
   );
 
   const handleAddToSession = useCallback(
-    (
+    async (
       sessionId: string,
       rawInput: string,
       result: number,
       category: string,
       eventDate: Date
     ) => {
-      db.notes
-        .add({ rawInput, result, category, createdAt: new Date(), eventDate, sessionId })
-        .then(loadNotes);
+      const sessionNotes = await db.notes
+        .where("sessionId")
+        .equals(sessionId)
+        .toArray();
+      const sessionTitle = sessionNotes.find((note) => note.sessionTitle?.trim())
+        ?.sessionTitle;
+      await db.notes.add({
+        rawInput,
+        result,
+        category,
+        sessionTitle,
+        createdAt: new Date(),
+        eventDate,
+        sessionId,
+      });
+      await loadNotes();
+    },
+    [loadNotes]
+  );
+
+  const handleUpdateSessionTitle = useCallback(
+    async (session: Note[], sessionTitle: string) => {
+      const normalizedTitle = sessionTitle.trim() || undefined;
+      const sessionId = session[0]?.sessionId;
+
+      if (sessionId) {
+        await db.notes
+          .where("sessionId")
+          .equals(sessionId)
+          .modify({ sessionTitle: normalizedTitle });
+      } else {
+        const updates = session
+          .map((note) => note.id)
+          .filter((id): id is number => id != null)
+          .map((key) => ({ key, changes: { sessionTitle: normalizedTitle } }));
+        await db.notes.bulkUpdate(updates);
+      }
+
+      await loadNotes();
+      setToast({ message: normalizedTitle ? "Titre modifié" : "Titre supprimé" });
+      setTimeout(() => setToast(null), 3000);
     },
     [loadNotes]
   );
@@ -126,6 +165,7 @@ export default function Home() {
             rawInput: line.rawInput,
             result: line.result,
             category: line.category,
+            sessionTitle: line.sessionTitle,
             createdAt: line.createdAt,
             eventDate: line.eventDate,
             sessionId: line.sessionId,
@@ -167,6 +207,7 @@ export default function Home() {
         .toLowerCase();
       if (
         !n.rawInput.toLowerCase().includes(q) &&
+        !n.sessionTitle?.toLowerCase().includes(q) &&
         !dateStr.includes(q) &&
         !n.category.toLowerCase().includes(q)
       ) {
@@ -242,6 +283,7 @@ export default function Home() {
             notes={filteredNotes}
             onDelete={handleDeleteRequest}
             onEdit={handleEdit}
+            onUpdateSessionTitle={handleUpdateSessionTitle}
             onAddToSession={handleAddToSession}
             loaded={loaded}
           />

@@ -19,6 +19,9 @@
 
 # production
 /build
+/artifacts/
+/.open-next/
+.dev.vars
 
 # misc
 .DS_Store

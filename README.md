@@ -35,3 +35,49 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 # noter-o
+
+## Tauri v2 et builds Docker
+
+Le projet contient un shell Tauri v2 autour de l’export statique Next.js (`out`).
+Les bundles desktop sont construits dans `Dockerfile.tauri`, puis servis sur le
+port `3000` pour pouvoir être téléchargés depuis le conteneur.
+
+Construire et démarrer le conteneur desktop :
+
+```bash
+docker compose build tauri-desktop
+docker compose up tauri-desktop
+```
+
+Les fichiers générés sont disponibles dans `artifacts/desktop/` et via
+<http://localhost:3000>.
+
+L’environnement Android est fourni par `Dockerfile.android`. Il monte le projet
+local, initialise Android Tauri si nécessaire, lance `tauri android build --apk`
+et copie les APK dans `artifacts/android/` :
+
+```bash
+docker compose --profile android build tauri-android
+TAURI_ANDROID_TARGET=aarch64 docker compose --profile android run --rm tauri-android
+```
+
+Pour produire une autre architecture, remplacer `aarch64` par `armv7`, `i686`
+ou `x86_64`.
+
+## Déploiement Cloudflare avec OpenNext
+
+Le déploiement Cloudflare utilise maintenant `@opennextjs/cloudflare` et
+Workers, avec la configuration [wrangler.jsonc](./wrangler.jsonc). Le build
+OpenNext ne produit pas le dossier `out` : ce dossier reste réservé au build
+statique Tauri (`npm run build:tauri`).
+
+```bash
+pnpm install
+pnpm cf:build
+pnpm cf:preview
+pnpm deploy:cf
+```
+
+Les commandes `cf:preview` et `deploy:cf` nécessitent une authentification
+Cloudflare Wrangler (`pnpm wrangler login`) ou les variables d’accès Cloudflare
+configurées dans l’environnement CI.

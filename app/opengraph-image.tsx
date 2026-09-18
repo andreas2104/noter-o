@@ -44,7 +44,7 @@ export default function OGImage() {
               fontSize: "32px",
             }}
           >
-            🧮
+            +
           </div>
           <span style={{ fontSize: "48px", fontWeight: "bold" }}>Note-O</span>
         </div>
