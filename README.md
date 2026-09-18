@@ -75,8 +75,18 @@ statique Tauri (`npm run build:tauri`).
 pnpm install
 pnpm cf:build
 pnpm cf:preview
+```
+
+Pour déployer en production :
+
+```bash
 pnpm deploy:cf
 ```
+
+`pnpm deploy:cf` construit toujours l'artefact OpenNext avant de lancer
+Wrangler. Dans Cloudflare Workers Builds, utilisez donc `pnpm deploy:cf` comme
+commande de déploiement ; elle ne dépend pas d'un artefact `.open-next` produit
+par une étape précédente.
 
 Les commandes `cf:preview` et `deploy:cf` nécessitent une authentification
 Cloudflare Wrangler (`pnpm wrangler login`) ou les variables d’accès Cloudflare
